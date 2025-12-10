@@ -2,8 +2,7 @@ from flask import Flask, request, jsonify
 from PyPDF2 import PdfReader
 import google.generativeai as genai
 from pinecone import Pinecone, ServerlessSpec
-import uuid
-import os
+import uuid,os
 from dotenv import load_dotenv
 
 app = Flask(__name__)
@@ -13,7 +12,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel("gemini-2.5-flash")
 
 pinecone_api_key = os.getenv("PINECONE_API_KEY")
-pincone_index_name = os.getenv("PINECONE_INDEX_NAME", "rag")
+pincone_index_name = os.getenv("PINECONE_INDEX_NAME", "rag-dotproduct")
 
 pc = Pinecone(api_key=pinecone_api_key)
 
@@ -21,11 +20,12 @@ if pincone_index_name not in [idx["name"] for idx in pc.list_indexes()]:
     pc.create_index(
         name=pincone_index_name,
         dimension=768,
-        metric="cosine",
+        metric="dotproduct",
         spec=ServerlessSpec(cloud="aws", region="us-east-1")
     )
 
 index = pc.Index(pincone_index_name)
+print(pc.list_indexes())
 
 def embed_text(text):
     result = genai.embed_content(model="text-embedding-004",content=text)
@@ -75,12 +75,11 @@ def upload_docs():
 def ask_chatbot():
     data = request.get_json()
     question = data.get("question")
-    
     if not question:
         return jsonify({"error": "Enter Question"}), 400
 
     question_vector = embed_text(question)
-    results = index.query(vector=question_vector,top_k=5,include_metadata=True)
+    results = index.query(vector=question_vector,top_k=2,include_metadata=True)
 
     context_text = ""
     for match in results["matches"]:
@@ -104,11 +103,25 @@ def ask_chatbot():
         answer = response.text  
     else:
         return f"No answer"
-    
+
+    metadata_list = []
+    for match in results['matches']:
+        metadata_list.append({
+            'id': match['id'],
+            'score': match['score'],
+            'metadata': match['metadata']
+        })
+
     return jsonify({
         "question": question,
         "answer": answer,
+        "source": metadata_list
     })
+
+@app.route('/delete_index', methods = ['POST'])
+def del_index():
+    pc.delete_index(pincone_index_name)
+    return jsonify({"message": "Index deleted"})
 
 if __name__ == '__main__':
     app.run(debug=True)

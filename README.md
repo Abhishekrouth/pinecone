@@ -7,10 +7,11 @@ Upload your company PDFs and let chatbot answer all the employees doubts.
 
 1. '/upload_pdf' POST: To upload company's PDF, extract the text from the pdf and store them into chunks in Pinecone.
 2. '/ask_chatbot' POST: To ask question from the uploaded PDFs, It also consists of a prompt to guide gemini-2.5-flash for responses.
-3. def embed_text(): To embedd the PDF using text-embedding-004
-4. def extract_text_from_file(): To extract the text from the uploaded PDFs.
-5. def split_text(): To split the text after max_length=200
-6. def store_chunks_pinecone(): To store the data in vector form inside Pincone index
+3. '/delete_index' POST: To delete the current index.
+4. def embed_text(): To embedd the PDF using text-embedding-004
+5. def extract_text_from_file(): To extract the text from the uploaded PDFs.
+6. def split_text(): To split the text after max_length=200
+7. def store_chunks_pinecone(): To store the data in vector form inside Pincone index
 * pincone_index_name: To store the vector embeddings, here it's named as "rag"
 * Distance metric:cosine, it's measures the cosine of the angle between two vectors.
 * pc.create_index: To create an index in Pincone if it's doesnt exists
